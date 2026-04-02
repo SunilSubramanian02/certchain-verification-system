@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CertChain</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="main">
+  <h1>CertChain</h1>
+  <p class="tag">Tamper-proof certificate system</p>
+
+  <div class="card">
+
+    <h3>ISSUE CERTIFICATE</h3>
+
+    <input id="name" placeholder="Candidate Name">
+    <input id="course" placeholder="Course">
+    <input id="certId" placeholder="Certificate ID">
+
+    <button onclick="addCertificate()">Generate & Store</button>
+
+    <hr>
+
+    <h3>VERIFY CERTIFICATE</h3>
+
+    <input id="verifyId" placeholder="Enter Certificate ID">
+    <button onclick="verifyCertificate()">Verify</button>
+
+    <div id="result"></div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
