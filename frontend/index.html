@@ -1,37 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>CertChain</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CertChain — Blockchain Certificate Verification</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 </head>
-
 <body>
 
-<div class="main">
-  <h1>CertChain</h1>
-  <p class="tag">Tamper-proof certificate system</p>
+<div class="bg-layer"></div>
+<div class="grid-bg"></div>
 
-  <div class="card">
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">CC</div>
+    <span class="nav-title">CertChain</span>
+  </div>
+  <div class="nav-badge">BLOCKCHAIN ACTIVE</div>
+</nav>
 
-    <h3>ISSUE CERTIFICATE</h3>
+<div class="hero">
+  <div class="hero-tag">⛓ Powered by Ethereum</div>
+  <h1>Tamper-Proof<br/>Certificates</h1>
+  <p>Issue and verify academic certificates secured by blockchain technology. Instantly detect fake certificates.</p>
+</div>
 
-    <input id="name" placeholder="Candidate Name">
-    <input id="course" placeholder="Course">
-    <input id="certId" placeholder="Certificate ID">
-
-    <button onclick="addCertificate()">Generate & Store</button>
-
-    <hr>
-
-    <h3>VERIFY CERTIFICATE</h3>
-
-    <input id="verifyId" placeholder="Enter Certificate ID">
-    <button onclick="verifyCertificate()">Verify</button>
-
-    <div id="result"></div>
-
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val">SHA-256</div>
+    <div class="stat-label">Hash Algorithm</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val">EVM</div>
+    <div class="stat-label">Smart Contract</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val">100%</div>
+    <div class="stat-label">Tamper-Proof</div>
   </div>
 </div>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-icon issue">📄</div>
+      <div>
+        <div class="panel-title">Issue Certificate</div>
+        <div class="panel-sub">STORE ON BLOCKCHAIN</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="field">
+        <label>Candidate Name</label>
+        <input type="text" id="name" placeholder="e.g. Sunil Subramanian R"/>
+      </div>
+      <div class="field">
+        <label>Course / Certification</label>
+        <input type="text" id="course" placeholder="e.g. Spring Boot REST API"/>
+      </div>
+      <div class="field">
+        <label>Certificate ID</label>
+        <input type="text" id="certId" placeholder="e.g. CERT001"/>
+      </div>
+      <div class="field">
+        <label>Upload Certificate PDF</label>
+        <input type="file" id="pdfFile" accept=".pdf"/>
+      </div>
+      <button class="btn-primary" id="generateBtn" onclick="addCertificate()">
+        Generate & Store on Chain →
+      </button>
+      <div class="result" id="issueResult"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-icon verify">🔍</div>
+      <div>
+        <div class="panel-title">Verify Certificate</div>
+        <div class="panel-sub">CHECK ON BLOCKCHAIN</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="field">
+        <label>Upload PDF to Verify</label>
+        <input type="file" id="verifyPdf" accept=".pdf"/>
+      </div>
+      <p class="helper-text">
+        Upload any certificate PDF — system checks if its hash exists on blockchain to confirm authenticity.
+      </p>
+      <button class="btn-primary btn-verify" id="verifyBtn" onclick="verifyCertificate()">
+        Verify Certificate →
+      </button>
+      <div class="result" id="verifyResult"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Secured by <span>Ethereum Blockchain</span> · Built with <span>MERN Stack</span> · <span>Hardhat</span>
+</footer>
 
 <script src="script.js"></script>
 </body>

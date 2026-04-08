@@ -1,24 +1,11 @@
 import mongoose from "mongoose";
 
 const certificateSchema = new mongoose.Schema({
-  candidateName: {
-    type: String,
-    required: true
-  },
-  course: {
-    type: String,
-    required: true
-  },
-  issueDate: {
-    type: Date,
-    default: Date.now
-  },
-  certificateId: {
-    type: String,
-    unique: true
-  }
+  candidateName: { type: String, required: true },
+  course: { type: String, required: true },
+  certificateId: { type: String, required: true, unique: true },
+  pdfHash: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
 });
 
-const Certificate = mongoose.model("Certificate", certificateSchema);
-
-export default Certificate;
+export default mongoose.model("Certificate", certificateSchema);
