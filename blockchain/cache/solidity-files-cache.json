@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\Sunil Subramanian\\Desktop\\certchain-verification-system\\blockchain\\contracts\\CertChain.sol": {
+      "lastModificationDate": 1775673227296,
+      "contentHash": "ef3aa421f59a09fc0e1675afbba26cbc",
+      "sourceName": "contracts/CertChain.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "CertChain"
+      ]
+    }
+  }
+}
