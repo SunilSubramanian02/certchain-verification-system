@@ -34,11 +34,63 @@ const artifactPath = path.join(
 );
 const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 const CONTRACT_ABI = artifact.abi;
-const CONTRACT_ADDRESS = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+const CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 
 const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
-const signer = await provider.getSigner();
-const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+const wallet = new ethers.Wallet(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  provider
+);
+const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+
+// ── AI Rule-based Certificate Analysis ──────────────────
+function analyzeCertificate(buffer) {
+  // Extract readable text from PDF buffer
+  const text = buffer.toString("latin1").toLowerCase();
+
+  const suspicious = [];
+  const positive = [];
+
+  if (/university|college|institute|academy|school|coursera|udemy|nptel/.test(text)) {
+    positive.push("Institution name detected");
+  } else {
+    suspicious.push("No institution name found");
+  }
+
+  if (/certificate|certif|completion|achievement|awarded|successfully/.test(text)) {
+    positive.push("Certificate keywords found");
+  } else {
+    suspicious.push("No certificate keywords found");
+  }
+
+  if (/201[0-9]|202[0-9]|january|february|march|april|may|june|july|august|september|october|november|december/.test(text)) {
+    positive.push("Date detected");
+  } else {
+    suspicious.push("No date found");
+  }
+
+  if (/awarded to|presented to|certify that|has successfully|has completed/.test(text)) {
+    positive.push("Proper certificate format detected");
+  } else {
+    suspicious.push("Standard certificate format missing");
+  }
+
+  if (/signature|director|principal|dean|authorized|signed|instructor|professor/.test(text)) {
+    positive.push("Authority reference found");
+  } else {
+    suspicious.push("No authority signature found");
+  }
+
+  const isSuspicious = suspicious.length >= 3;
+
+  return {
+    isSuspicious,
+    suspicious,
+    positive,
+    verdict: isSuspicious ? "⚠️ Suspicious Certificate" : "✅ Looks Genuine"
+  };
+}
+// ────────────────────────────────────────────────────────
 
 // Test route
 app.get("/ping", (req, res) => {
@@ -86,7 +138,7 @@ app.post("/add-certificate", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// POST → Verify PDF
+// POST → Verify PDF (with AI Analysis)
 app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
   try {
     if (!req.file) {
@@ -97,6 +149,11 @@ app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
       .update(req.file.buffer)
       .digest("hex");
 
+    // AI Analysis
+    const aiResult = analyzeCertificate(req.file.buffer);
+    console.log("AI Analysis:", aiResult.verdict);
+
+    // Blockchain check
     const isOnChain = await contract.verifyCertificate(pdfHash);
 
     if (isOnChain) {
@@ -104,12 +161,14 @@ app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
       res.status(200).json({
         message: "Certificate is VALID ✅",
         blockchainVerified: true,
-        data: certificate
+        data: certificate,
+        aiAnalysis: aiResult
       });
     } else {
       res.status(200).json({
         message: "Certificate is FAKE ❌",
-        blockchainVerified: false
+        blockchainVerified: false,
+        aiAnalysis: aiResult
       });
     }
 
@@ -119,7 +178,7 @@ app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// GET → Verify by ID
+// GET → Verify by ID (QR scan)
 app.get("/verify/:id", async (req, res) => {
   try {
     const certificate = await Certificate.findOne({
