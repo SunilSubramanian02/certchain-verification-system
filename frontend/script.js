@@ -1,4 +1,4 @@
-const API = "http://localhost:5000";
+const API_URL = "https://certchain-verification-system.onrender.com"; 
 
 async function addCertificate() {
   const name = document.getElementById("name").value.trim();
