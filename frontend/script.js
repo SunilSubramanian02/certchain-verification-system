@@ -9,7 +9,7 @@ async function addCertificate() {
   const result = document.getElementById("issueResult");
 
   if (!name || !course || !certId || !pdfFile) {
-    showError(result, "All fields + PDF required");
+    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">All fields + PDF required</div></div></div>`;
     return;
   }
 
@@ -29,23 +29,33 @@ async function addCertificate() {
     if (data.qrCode) {
       result.innerHTML = `
         <div class="result-stored">
-          <p class="status-text stored">✓ Stored on Blockchain</p>
-          <div class="cert-row"><span class="cert-key">Name</span><span>${data.data.candidateName}</span></div>
-          <div class="cert-row"><span class="cert-key">Cert ID</span><span>${data.data.certificateId}</span></div>
+          <div class="result-status">
+            <div class="status-icon stored">✓</div>
+            <div class="status-text stored">Stored on Blockchain</div>
+          </div>
+          <div class="cert-grid">
+            <div class="cert-row"><span class="cert-key">Name</span><span class="cert-val">${data.data.candidateName}</span></div>
+            <div class="cert-row"><span class="cert-key">Course</span><span class="cert-val">${data.data.course}</span></div>
+            <div class="cert-row"><span class="cert-key">Cert ID</span><span class="cert-val">${data.data.certificateId}</span></div>
+          </div>
+          <div class="hash-row">
+            <div class="hash-label">Blockchain Hash</div>
+            <div class="hash-val">${data.blockchainHash}</div>
+          </div>
           <div class="qr-wrap">
-            <img src="${data.qrCode}" alt="QR"/>
-            <p class="cert-key">Scan to verify</p>
+            <img src="${data.qrCode}" alt="QR Code"/>
+            <span class="qr-hint">⬆ Scan to verify instantly</span>
           </div>
         </div>`;
     } else {
-      showError(result, data.error || "Execution failed");
+      result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">${data.error || "Something went wrong"}</div></div></div>`;
     }
   } catch (err) {
-    showError(result, "Server connection failed");
-  } finally {
-    btn.classList.remove("loading");
-    btn.textContent = "Generate & Store on Chain →";
+    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">Server not responding</div></div></div>`;
   }
+
+  btn.classList.remove("loading");
+  btn.textContent = "Generate & Store on Chain →";
 }
 
 async function verifyCertificate() {
@@ -54,7 +64,7 @@ async function verifyCertificate() {
   const result = document.getElementById("verifyResult");
 
   if (!pdfFile) {
-    showError(result, "Please upload a PDF");
+    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">Please upload a PDF</div></div></div>`;
     return;
   }
 
@@ -68,27 +78,67 @@ async function verifyCertificate() {
     const res = await fetch(`${API}/verify-pdf`, { method: "POST", body: formData });
     const data = await res.json();
 
+    // Build AI analysis HTML
+    const aiHTML = data.aiAnalysis ? `
+      <div class="ai-box">
+        <div class="ai-header">
+          <span class="ai-icon">🤖</span>
+          <span class="ai-title">AI Analysis</span>
+          <span class="ai-verdict ${data.aiAnalysis.isSuspicious ? 'suspicious' : 'genuine'}">
+            ${data.aiAnalysis.verdict}
+          </span>
+        </div>
+        <div class="ai-checks">
+          ${data.aiAnalysis.positive.map(p => `
+            <div class="ai-check positive">✓ ${p}</div>
+          `).join('')}
+          ${data.aiAnalysis.suspicious.map(s => `
+            <div class="ai-check suspicious">⚠ ${s}</div>
+          `).join('')}
+        </div>
+      </div>` : '';
+
     if (data.blockchainVerified) {
       result.innerHTML = `
         <div class="result-valid">
-          <p class="status-text valid">✓ Certificate is VALID</p>
-          <div class="cert-row"><span>Name</span><span>${data.data.candidateName}</span></div>
+          <div class="result-status">
+            <div class="status-icon valid">✓</div>
+            <div class="status-text valid">Certificate is VALID</div>
+          </div>
+          <div class="cert-grid">
+            <div class="cert-row"><span class="cert-key">Name</span><span class="cert-val">${data.data.candidateName}</span></div>
+            <div class="cert-row"><span class="cert-key">Course</span><span class="cert-val">${data.data.course}</span></div>
+            <div class="cert-row"><span class="cert-key">Cert ID</span><span class="cert-val">${data.data.certificateId}</span></div>
+          </div>
+          ${aiHTML}
         </div>`;
     } else {
       result.innerHTML = `
         <div class="result-fake">
-          <p class="status-text fake">✗ Certificate is FAKE</p>
-          <p class="cert-key">Hash not found on chain.</p>
+          <div class="result-status">
+            <div class="status-icon fake">✗</div>
+            <div class="status-text fake">Certificate is FAKE</div>
+          </div>
+          <p style="font-size:12px; color:var(--muted2); font-family:'Space Mono',monospace; line-height:1.6; margin-bottom:14px;">
+            This PDF hash was not found on the blockchain.
+          </p>
+          ${aiHTML}
         </div>`;
     }
   } catch (err) {
-    showError(result, "Server error");
-  } finally {
-    btn.classList.remove("loading");
-    btn.textContent = "Verify Certificate →";
+    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">Server not responding</div></div></div>`;
   }
+
+  btn.classList.remove("loading");
+  btn.textContent = "Verify Certificate →";
 }
 
-function showError(container, msg) {
-  container.innerHTML = `<div class="result-error"><p class="status-text fake">✗ ${msg}</p></div>`;
+function showError(msg) {
+  document.getElementById("verifyResult").innerHTML = `
+    <div class="result-error">
+      <div class="result-status">
+        <div class="status-icon fake">✗</div>
+        <div class="status-text error">${msg}</div>
+      </div>
+    </div>`;
 }

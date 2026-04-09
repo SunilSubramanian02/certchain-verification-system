@@ -122,10 +122,68 @@ input[type="text"]:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba
 
 .cert-row { display: flex; justify-content: space-between; padding: 7px 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 4px; }
 .cert-key { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); }
+.cert-val { font-size: 13px; font-weight: 500; }
 .qr-wrap { text-align: center; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 12px; margin-top: 10px; }
 .qr-wrap img { width: 130px; background: #fff; padding: 4px; border-radius: 8px; }
 
 footer { text-align: center; padding: 24px; border-top: 1px solid var(--border); font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* --- AI Analysis Box (The New Part) --- */
+.ai-box {
+  margin-top: 18px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 16px;
+}
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ai-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--muted2);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  flex: 1;
+}
+.ai-verdict {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+.ai-verdict.genuine {
+  background: rgba(0,255,136,0.1);
+  color: var(--green);
+  border: 1px solid rgba(0,255,136,0.2);
+}
+.ai-verdict.suspicious {
+  background: rgba(255,209,102,0.1);
+  color: var(--gold);
+  border: 1px solid rgba(255,209,102,0.2);
+}
+.ai-checks { display: grid; gap: 6px; }
+.ai-check {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.ai-check.positive {
+  background: rgba(0,255,136,0.06);
+  color: var(--green);
+}
+.ai-check.suspicious {
+  background: rgba(255,209,102,0.06);
+  color: var(--gold);
+}
 
 /* Animations */
 @keyframes blink { 50% { opacity: 0.3; } }
