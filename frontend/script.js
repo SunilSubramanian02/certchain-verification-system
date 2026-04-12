@@ -75,7 +75,7 @@ async function verifyCertificate() {
     const formData = new FormData();
     formData.append("pdf", pdfFile);
 
-    const res = await fetch(`${API}/verify-pdf`, { method: "POST", body: formData });
+    const res = await fetch(`${API}/add-certificate`, { method: "POST", body: formData, signal: AbortSignal.timeout(60000) });
     const data = await res.json();
 
     const aiHTML = data.aiAnalysis ? `
