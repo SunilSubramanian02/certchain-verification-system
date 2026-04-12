@@ -12,23 +12,20 @@ import path from "path";
 import multer from "multer";
 
 dotenv.config();
-
 const app = express();
 
+// CORS for Vercel
 app.use(cors({ origin: "*" }));
+app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname, "../frontend")));
-
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-const artifactPath = path.join(
-  __dirname, "..", "blockchain", "artifacts", "contracts",
-  "CertChain.sol", "CertChain.json"
-);
+// Contract Setup
+const artifactPath = path.join(__dirname, "..", "blockchain", "artifacts", "contracts", "CertChain.sol", "CertChain.json");
 const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 const CONTRACT_ABI = artifact.abi;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
@@ -37,165 +34,64 @@ const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
+// AI Analysis Logic
 function analyzeCertificate(buffer) {
-  const text = buffer.toString("latin1").toLowerCase();
-  const suspicious = [];
-  const positive = [];
-
-  if (/university|college|institute|academy|school|coursera|udemy|nptel/.test(text)) {
-    positive.push("Institution name detected");
-  } else {
-    suspicious.push("No institution name found");
-  }
-
-  if (/certificate|certif|completion|achievement|awarded|successfully/.test(text)) {
-    positive.push("Certificate keywords found");
-  } else {
-    suspicious.push("No certificate keywords found");
-  }
-
-  if (/201[0-9]|202[0-9]|january|february|march|april|may|june|july|august|september|october|november|december/.test(text)) {
-    positive.push("Date detected");
-  } else {
-    suspicious.push("No date found");
-  }
-
-  if (/awarded to|presented to|certify that|has successfully|has completed/.test(text)) {
-    positive.push("Proper certificate format detected");
-  } else {
-    suspicious.push("Standard certificate format missing");
-  }
-
-  if (/signature|director|principal|dean|authorized|signed|instructor|professor/.test(text)) {
-    positive.push("Authority reference found");
-  } else {
-    suspicious.push("No authority signature found");
-  }
-
-  const isSuspicious = suspicious.length >= 3;
-
-  return {
-    isSuspicious,
-    suspicious,
-    positive,
-    verdict: isSuspicious ? "Suspicious Certificate" : "Looks Genuine"
-  };
+    const text = buffer.toString("latin1").toLowerCase();
+    const suspicious = [];
+    const positive = [];
+    if (/university|college|institute|academy|school|coursera|udemy|nptel/.test(text)) positive.push("Institution detected");
+    else suspicious.push("No institution found");
+    if (/certificate|completion|achievement|awarded/.test(text)) positive.push("Keywords found");
+    else suspicious.push("Keywords missing");
+    const isSuspicious = suspicious.length >= 3;
+    return { isSuspicious, suspicious, positive, verdict: isSuspicious ? "Suspicious" : "Looks Genuine" };
 }
 
-app.get("/", (req, res) => {
-  res.send("CertChain Server Running");
-});
-
-app.get("/ping", (req, res) => {
-  res.send("pong");
-});
+// Routes
+app.get("/", (req, res) => res.send("CertChain Backend is Live! ✅"));
 
 app.post("/add-certificate", upload.single("pdf"), async (req, res) => {
-  try {
-    const { candidateName, course, certificateId } = req.body;
+    try {
+        const { candidateName, course, certificateId } = req.body;
+        if (!req.file) return res.status(400).json({ error: "PDF required" });
 
-    if (!req.file) {
-      return res.status(400).json({ error: "PDF file required" });
+        const pdfHash = createHash("sha256").update(req.file.buffer).digest("hex");
+        const newCertificate = new Certificate({ candidateName, course, certificateId, pdfHash });
+        await newCertificate.save();
+
+        const tx = await contract.addCertificate(pdfHash);
+        await tx.wait();
+
+        const qrData = `https://certchain-verification-system.onrender.com/verify/${certificateId}`;
+        const qrCode = await QRCode.toDataURL(qrData);
+
+        res.status(201).json({ message: "Stored on Blockchain", data: newCertificate, qrCode, blockchainHash: pdfHash });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const pdfHash = createHash("sha256")
-      .update(req.file.buffer)
-      .digest("hex");
-
-    const newCertificate = new Certificate({
-      candidateName,
-      course,
-      certificateId,
-      pdfHash
-    });
-    await newCertificate.save();
-
-    const tx = await contract.addCertificate(pdfHash);
-    await tx.wait();
-    console.log("PDF Hash stored on blockchain:", pdfHash);
-
-    const qrData = `https://certchain-verification-system.onrender.com/verify/${certificateId}`;
-    const qrCode = await QRCode.toDataURL(qrData);
-
-    res.status(201).json({
-      message: "Certificate Added",
-      data: newCertificate,
-      qrCode,
-      blockchainHash: pdfHash
-    });
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "PDF file required" });
+    try {
+        if (!req.file) return res.status(400).json({ error: "PDF required" });
+        const pdfHash = createHash("sha256").update(req.file.buffer).digest("hex");
+        const aiResult = analyzeCertificate(req.file.buffer);
+        const isOnChain = await contract.verifyCertificate(pdfHash);
+
+        if (isOnChain) {
+            const certificate = await Certificate.findOne({ pdfHash });
+            res.status(200).json({ blockchainVerified: true, data: certificate, aiAnalysis: aiResult });
+        } else {
+            res.status(200).json({ blockchainVerified: false, aiAnalysis: aiResult });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const pdfHash = createHash("sha256")
-      .update(req.file.buffer)
-      .digest("hex");
-
-    const aiResult = analyzeCertificate(req.file.buffer);
-    console.log("AI Analysis:", aiResult.verdict);
-
-    const isOnChain = await contract.verifyCertificate(pdfHash);
-
-    if (isOnChain) {
-      const certificate = await Certificate.findOne({ pdfHash });
-      res.status(200).json({
-        message: "Certificate is VALID",
-        blockchainVerified: true,
-        data: certificate,
-        aiAnalysis: aiResult
-      });
-    } else {
-      res.status(200).json({
-        message: "Certificate is FAKE",
-        blockchainVerified: false,
-        aiAnalysis: aiResult
-      });
-    }
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
 });
 
-app.get("/verify/:id", async (req, res) => {
-  try {
-    const certificate = await Certificate.findOne({
-      certificateId: req.params.id
-    });
-
-    if (!certificate) {
-      return res.status(404).json({ message: "Certificate Not Found" });
-    }
-
-    const isOnChain = await contract.verifyCertificate(certificate.pdfHash);
-
-    res.status(200).json({
-      message: isOnChain ? "Certificate Verified" : "Not on Blockchain",
-      data: certificate,
-      blockchainVerified: isOnChain
-    });
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
+// Server Start
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("MongoDB Connected");
-    app.listen(process.env.PORT || 5000, () =>
-      console.log(`Server started on port ${process.env.PORT || 5000}`)
-    );
-  })
-  .catch((err) => console.log(err));
+    .then(() => {
+        app.listen(process.env.PORT || 5000, () => console.log("Server & DB Connected ✅"));
+    })
+    .catch(err => console.log("DB Error:", err));
