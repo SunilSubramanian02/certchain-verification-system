@@ -15,16 +15,8 @@ dotenv.config();
 
 const app = express();
 
-// CORS fix for Vercel
-app.use(cors({
-  origin: [
-    "https://cert-chain-system.vercel.app",
-    "http://localhost:5000",
-    "http://localhost:3000"
-  ],
-  methods: ["GET", "POST"],
-  credentials: true
-}));
+// CORS — allow all origins
+app.use(cors({ origin: "*" }));
 
 // Path setup
 const __filename = fileURLToPath(import.meta.url);
@@ -97,125 +89,5 @@ function analyzeCertificate(buffer) {
 }
 // ────────────────────────────────────────────────────────
 
-// Test route
 app.get("/", (req, res) => {
-  res.send("CertChain Server Running 🚀");
-});
-
-app.get("/ping", (req, res) => {
-  res.send("Server Running 🚀");
-});
-
-// POST → Add Certificate
-app.post("/add-certificate", upload.single("pdf"), async (req, res) => {
-  try {
-    const { candidateName, course, certificateId } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ error: "PDF file required" });
-    }
-
-    const pdfHash = createHash("sha256")
-      .update(req.file.buffer)
-      .digest("hex");
-
-    const newCertificate = new Certificate({
-      candidateName,
-      course,
-      certificateId,
-      pdfHash
-    });
-    await newCertificate.save();
-
-    const tx = await contract.addCertificate(pdfHash);
-    await tx.wait();
-    console.log("PDF Hash stored on blockchain ✅:", pdfHash);
-
-    const qrData = `https://certchain-verification-system.onrender.com/verify/${certificateId}`;
-    const qrCode = await QRCode.toDataURL(qrData);
-
-    res.status(201).json({
-      message: "Certificate Added ✅",
-      data: newCertificate,
-      qrCode,
-      blockchainHash: pdfHash
-    });
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST → Verify PDF (with AI Analysis)
-app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "PDF file required" });
-    }
-
-    const pdfHash = createHash("sha256")
-      .update(req.file.buffer)
-      .digest("hex");
-
-    // AI Analysis
-    const aiResult = analyzeCertificate(req.file.buffer);
-    console.log("AI Analysis:", aiResult.verdict);
-
-    // Blockchain check
-    const isOnChain = await contract.verifyCertificate(pdfHash);
-
-    if (isOnChain) {
-      const certificate = await Certificate.findOne({ pdfHash });
-      res.status(200).json({
-        message: "Certificate is VALID ✅",
-        blockchainVerified: true,
-        data: certificate,
-        aiAnalysis: aiResult
-      });
-    } else {
-      res.status(200).json({
-        message: "Certificate is FAKE ❌",
-        blockchainVerified: false,
-        aiAnalysis: aiResult
-      });
-    }
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET → Verify by ID (QR scan)
-app.get("/verify/:id", async (req, res) => {
-  try {
-    const certificate = await Certificate.findOne({
-      certificateId: req.params.id
-    });
-
-    if (!certificate) {
-      return res.status(404).json({ message: "Certificate Not Found ❌" });
-    }
-
-    const isOnChain = await contract.verifyCertificate(certificate.pdfHash);
-
-    res.status(200).json({
-      message: isOnChain ? "Certificate Verified ✅" : "Not on Blockchain ⚠️",
-      data: certificate,
-      blockchainVerified: isOnChain
-    });
-
-  } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Connect DB and start server
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB Connected ✅");
-    app.listen(5000, () => console.log("Server started on port 5000"));
-  })
-  .catch((err) => console.log(err));
+  res.send("CertChain Server Running
