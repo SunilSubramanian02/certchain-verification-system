@@ -46,7 +46,7 @@ const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 const CONTRACT_ABI = artifact.abi;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 
-const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
