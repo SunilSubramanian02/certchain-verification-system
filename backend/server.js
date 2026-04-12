@@ -15,21 +15,16 @@ dotenv.config();
 
 const app = express();
 
-// CORS — allow all origins
 app.use(cors({ origin: "*" }));
 
-// Path setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Multer setup
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Blockchain setup
 const artifactPath = path.join(
   __dirname, "..", "blockchain", "artifacts", "contracts",
   "CertChain.sol", "CertChain.json"
@@ -42,7 +37,6 @@ const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
-// ── AI Rule-based Certificate Analysis ──────────────────
 function analyzeCertificate(buffer) {
   const text = buffer.toString("latin1").toLowerCase();
   const suspicious = [];
@@ -84,10 +78,124 @@ function analyzeCertificate(buffer) {
     isSuspicious,
     suspicious,
     positive,
-    verdict: isSuspicious ? "⚠️ Suspicious Certificate" : "✅ Looks Genuine"
+    verdict: isSuspicious ? "Suspicious Certificate" : "Looks Genuine"
   };
 }
-// ────────────────────────────────────────────────────────
 
 app.get("/", (req, res) => {
-  res.send("CertChain Server Running
+  res.send("CertChain Server Running");
+});
+
+app.get("/ping", (req, res) => {
+  res.send("pong");
+});
+
+app.post("/add-certificate", upload.single("pdf"), async (req, res) => {
+  try {
+    const { candidateName, course, certificateId } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "PDF file required" });
+    }
+
+    const pdfHash = createHash("sha256")
+      .update(req.file.buffer)
+      .digest("hex");
+
+    const newCertificate = new Certificate({
+      candidateName,
+      course,
+      certificateId,
+      pdfHash
+    });
+    await newCertificate.save();
+
+    const tx = await contract.addCertificate(pdfHash);
+    await tx.wait();
+    console.log("PDF Hash stored on blockchain:", pdfHash);
+
+    const qrData = `https://certchain-verification-system.onrender.com/verify/${certificateId}`;
+    const qrCode = await QRCode.toDataURL(qrData);
+
+    res.status(201).json({
+      message: "Certificate Added",
+      data: newCertificate,
+      qrCode,
+      blockchainHash: pdfHash
+    });
+
+  } catch (error) {
+    console.log("Error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/verify-pdf", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "PDF file required" });
+    }
+
+    const pdfHash = createHash("sha256")
+      .update(req.file.buffer)
+      .digest("hex");
+
+    const aiResult = analyzeCertificate(req.file.buffer);
+    console.log("AI Analysis:", aiResult.verdict);
+
+    const isOnChain = await contract.verifyCertificate(pdfHash);
+
+    if (isOnChain) {
+      const certificate = await Certificate.findOne({ pdfHash });
+      res.status(200).json({
+        message: "Certificate is VALID",
+        blockchainVerified: true,
+        data: certificate,
+        aiAnalysis: aiResult
+      });
+    } else {
+      res.status(200).json({
+        message: "Certificate is FAKE",
+        blockchainVerified: false,
+        aiAnalysis: aiResult
+      });
+    }
+
+  } catch (error) {
+    console.log("Error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/verify/:id", async (req, res) => {
+  try {
+    const certificate = await Certificate.findOne({
+      certificateId: req.params.id
+    });
+
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate Not Found" });
+    }
+
+    const isOnChain = await contract.verifyCertificate(certificate.pdfHash);
+
+    res.status(200).json({
+      message: isOnChain ? "Certificate Verified" : "Not on Blockchain",
+      data: certificate,
+      blockchainVerified: isOnChain
+    });
+
+  } catch (error) {
+    console.log("Error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("MongoDB Connected");
+    app.listen(process.env.PORT || 5000, () =>
+      console.log(`Server started on port ${process.env.PORT || 5000}`)
+    );
+  })
+  .catch((err) => console.log(err));
