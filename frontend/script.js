@@ -1,4 +1,5 @@
-const API = "https://certchain-verification-system.onrender.com";
+// Ensure this is exactly your Render URL without a trailing slash
+const API_URL = "https://certchain-verification-system.onrender.com";
 
 async function addCertificate() {
   const name = document.getElementById("name").value.trim();
@@ -23,7 +24,12 @@ async function addCertificate() {
     formData.append("certificateId", certId);
     formData.append("pdf", pdfFile);
 
-    const res = await fetch(`${API}/add-certificate`, { method: "POST", body: formData });
+    // FIXED: Changed ${API} to ${API_URL}
+    const res = await fetch(`${API_URL}/add-certificate`, { 
+        method: "POST", 
+        body: formData 
+    });
+    
     const data = await res.json();
 
     if (data.qrCode) {
@@ -51,7 +57,8 @@ async function addCertificate() {
       result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">${data.error || "Something went wrong"}</div></div></div>`;
     }
   } catch (err) {
-    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">Server not responding</div></div></div>`;
+    console.error("Error details:", err); // Intha error-ah console-la paaka help pannum
+    result.innerHTML = `<div class="result-error"><div class="result-status"><div class="status-icon fake">✗</div><div class="status-text error">Server connection failed</div></div></div>`;
   }
 
   btn.classList.remove("loading");
@@ -75,7 +82,12 @@ async function verifyCertificate() {
     const formData = new FormData();
     formData.append("pdf", pdfFile);
 
-    const res = await fetch(`${API}/add-certificate`, { method: "POST", body: formData, signal: AbortSignal.timeout(60000) });
+    // FIXED: Changed ${API} to ${API_URL} and correct endpoint /verify-certificate
+    const res = await fetch(`${API_URL}/verify-certificate`, { 
+        method: "POST", 
+        body: formData
+    });
+    
     const data = await res.json();
 
     const aiHTML = data.aiAnalysis ? `
@@ -130,14 +142,4 @@ async function verifyCertificate() {
 
   btn.classList.remove("loading");
   btn.textContent = "Verify Certificate →";
-}
-
-function showError(msg) {
-  document.getElementById("verifyResult").innerHTML = `
-    <div class="result-error">
-      <div class="result-status">
-        <div class="status-icon fake">✗</div>
-        <div class="status-text error">${msg}</div>
-      </div>
-    </div>`;
 }
