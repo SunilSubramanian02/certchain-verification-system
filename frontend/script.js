@@ -1,4 +1,4 @@
-const API_URL = "https://certchain-verification-system.onrender.com"; 
+const API = "https://certchain-verification-system.onrender.com";
 
 async function addCertificate() {
   const name = document.getElementById("name").value.trim();
@@ -78,7 +78,6 @@ async function verifyCertificate() {
     const res = await fetch(`${API}/verify-pdf`, { method: "POST", body: formData });
     const data = await res.json();
 
-    // Build AI analysis HTML
     const aiHTML = data.aiAnalysis ? `
       <div class="ai-box">
         <div class="ai-header">
